@@ -10,6 +10,6 @@ set_target_properties(dxl PROPERTIES
         INTERFACE_INCLUDE_DIRECTORIES "${PROJECT_SOURCE_DIR}/DynamixelSDK/include/dynamixel_sdk"
         )
 
-add_library(${PROJECT_NAME} minicheetah_motor.cpp robomodule_motor.cpp socketcan.cpp dynamixel_motor.cpp dynamixel_motor.h)
+add_library(${PROJECT_NAME} minicheetah_motor.cpp robomodule_motor.cpp socketcan.cpp dynamixel_motor.cpp dynamixel_motor.h briter_encoder.cpp briter_encoder.h)
 target_include_directories(${PROJECT_NAME} PRIVATE ${PROJECT_SOURCE_DIR})
 target_link_libraries(${PROJECT_NAME} pthread dxl)
