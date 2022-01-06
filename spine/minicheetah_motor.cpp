@@ -7,6 +7,8 @@
 #include <stdexcept>
 #include <cstdio>
 
+std::vector<MiniCheetahMotor *> MiniCheetahMotor::collection_;
+
 void MiniCheetahMotor::controlRaw(double qDes, double qdDes, double tauDes,
                                   double kP, double kD) {
   struct can_frame frame {};

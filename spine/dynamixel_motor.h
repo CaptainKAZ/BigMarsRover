@@ -9,7 +9,7 @@
 #include <string>
 #include <thread>
 
-class DynamixelMotor : Motor {
+class DynamixelMotor : public Motor {
 public:
   DynamixelMotor(uint8_t id, const std::string &portName);
   ~DynamixelMotor();
@@ -24,7 +24,7 @@ public:
     throw std::runtime_error("Not implemented");
   };
   void stop() override { torqueControl(TORQUE_DISABLE); };
-  void control() override;
+  void control() override{newCommand_= true;};
   static void stopThread();
 
 private:
@@ -32,17 +32,21 @@ private:
   constexpr const static double PROTOCOL_VERSION = 2.0;
   constexpr const static int TORQUE_ENABLE = 1;
   constexpr const static int TORQUE_DISABLE = 0;
-  constexpr const static int ADDR_PRO_TORQUE_ENABLE = 562;
-  constexpr const static int ADDR_PRO_GOAL_POSITION = 596;
-  constexpr const static int ADDR_PRO_PRESENT_POSITION = 611;
+  constexpr const static int ADDR_TORQUE_ENABLE = 512;
+  constexpr const static int ADDR_GOAL_POSITION = 564;
+  constexpr const static int ADDR_PRESENT_POSITION = 580;
+  constexpr const static int ADDR_POSITION_GAIN = 532;
   dynamixel::PortHandler *portHandler_;
   dynamixel::PacketHandler *packetHandler_;
   static std::vector<dynamixel::PortHandler *> ports_;
-  [[noreturn]] static void readThread();
+  [[noreturn]] static void readWriteThread();
   static std::thread *pReadThread_;
   static std::vector<DynamixelMotor *> collection_;
   // TODO:Actual ratio
-  const double pos2Angle_ = 0.01;
+  const double pos2Angle_ = (double)251417.0/180.0;
   void torqueControl(uint32_t command);
-  void read();
+  void readPos();
+  void setPosGain(uint16_t gain);
+  void controlRaw();
+  bool newCommand_= false;
 };
