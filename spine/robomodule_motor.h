@@ -5,14 +5,15 @@
 #pragma once
 #include "motor.h"
 #include "socketcan.h"
+#include "iostream"
 
-class RoboModuleMotor : Motor {
+class RoboModuleMotor : public Motor {
 public:
   RoboModuleMotor() = default;
   RoboModuleMotor(uint16_t pwmLimit, double q2int, double tau2int,
                   double qd2int)
-      : pwmLimit_(pwmLimit), tau2int_(tau2int), qd2int_(qd2int),
-        q2int_(qd2int) {}
+      : pwmLimit_(pwmLimit), tau2int_(tau2int), qd2int_(qd2int), q2int_(q2int),
+        state_(UNKNOWN) {}
   uint8_t group_{};
   uint8_t id_{};
 
@@ -27,6 +28,9 @@ public:
   void control() override;
   void attach(uint8_t group, uint8_t id, SocketCan *sc);
   void faultHandler() const;
+  bool isReady();
+  // TODO: RESET
+  static void goZero();
 
 private:
   void reset();
@@ -56,6 +60,7 @@ private:
                        SocketCan *sc);
 };
 
-class ElectricPutter : RoboModuleMotor {
-  ElectricPutter() : RoboModuleMotor(5000, 1, 1, 1){};
+class ElectricPutter : public RoboModuleMotor {
+public:
+  ElectricPutter() : RoboModuleMotor(5000, 640.0 / 3.0, 1, 1) {}
 };

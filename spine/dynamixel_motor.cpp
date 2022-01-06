@@ -110,7 +110,7 @@ DynamixelMotor::~DynamixelMotor() {
   if (collection_.end() !=
       (pos = std::find(collection_.begin(), collection_.end(), this))) {
     collection_.erase(pos);
-    if (pos == collection_.begin()) {
+    if (collection_.empty()) {
       stopThread();
       for (auto p : ports_) {
         p->closePort();
