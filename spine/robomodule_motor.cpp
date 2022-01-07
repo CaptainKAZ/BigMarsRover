@@ -117,8 +117,8 @@ void RoboModuleMotor::attach(uint8_t group, uint8_t id, SocketCan *sc) {
   id_ = id;
   sc_ = sc;
   // Multi-thread non-blocking init
-  // std::thread(RoboModuleMotor::init, this);
-  init(this);
+  pInitThread_ = new std::thread(RoboModuleMotor::init, this);
+  // init(this);
 }
 bool RoboModuleMotor::canProbe(RoboModuleMotor *self, can_frame &frame,
                                SocketCan *sc) {
@@ -157,4 +157,10 @@ void RoboModuleMotor::faultHandler() const {
   throw std::runtime_error("Motor at group " + std::to_string(group_) + " id " +
                            std::to_string(id_) + " stalled");
 }
-bool RoboModuleMotor::isReady() { return state_ == CONTROL_POS; }
+bool RoboModuleMotor::isReady() {
+  if (state_ == CONTROL_POS) {
+    pInitThread_->join();
+    return true;
+  }
+  return false;
+}

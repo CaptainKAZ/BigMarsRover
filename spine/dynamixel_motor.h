@@ -24,8 +24,10 @@ public:
     throw std::runtime_error("Not implemented");
   };
   void stop() override { torqueControl(TORQUE_DISABLE); };
-  void control() override{newCommand_= true;};
+  void control() override { newCommand_ = true; };
   static void stopThread();
+
+  volatile bool newCommand_ = false;
 
 private:
   constexpr const static int BAUDRATE = 57600;
@@ -48,5 +50,4 @@ private:
   void readPos();
   void setPosGain(uint16_t gain);
   void controlRaw();
-  bool newCommand_= false;
 };

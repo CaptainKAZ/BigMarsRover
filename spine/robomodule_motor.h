@@ -6,6 +6,7 @@
 #include "motor.h"
 #include "socketcan.h"
 #include "iostream"
+#include <thread>
 
 class RoboModuleMotor : public Motor {
 public:
@@ -47,13 +48,19 @@ private:
   void controlPos(uint16_t pwmLimit, int32_t pos);
   void setFeedback(uint8_t ms);
   void ping();
-
+  std::thread *pInitThread_;
   const uint16_t pwmLimit_ = 5000;
   const double q2int_ = 1;
   const double tau2int_ = 1;
   const double qd2int_ = 1;
   std::chrono::high_resolution_clock::time_point lastCommandTime_{};
-  enum State { UNKNOWN, RESET, FAULT, SELECT_MODE, CONTROL_POS } state_;
+  volatile enum State {
+    UNKNOWN,
+    RESET,
+    FAULT,
+    SELECT_MODE,
+    CONTROL_POS
+  } state_;
   SocketCan *sc_ = nullptr;
   static void init(RoboModuleMotor *self);
   static bool canProbe(RoboModuleMotor *self, struct can_frame &frame,

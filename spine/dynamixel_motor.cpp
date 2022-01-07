@@ -36,11 +36,13 @@ DynamixelMotor::DynamixelMotor(uint8_t id, const std::string &portName) {
   packetHandler_ = dynamixel::PacketHandler::getPacketHandler(PROTOCOL_VERSION);
   setPosGain(30);
   torqueControl(TORQUE_ENABLE);
-  std::cout << "Successfully opened " << id << " at port " + portName
+  std::cout << "Successfully opened " << (int)id << " at port " + portName
             << std::endl;
+
   collection_.push_back(this);
   if (pReadThread_ == nullptr) {
     pReadThread_ = new std::thread(readWriteThread);
+    printf("Started read thread\n");
   }
 }
 void DynamixelMotor::torqueControl(uint32_t command) {
@@ -60,49 +62,64 @@ void DynamixelMotor::torqueControl(uint32_t command) {
 [[noreturn]] void DynamixelMotor::readWriteThread() {
   while (true) {
     for (auto m : collection_) {
+      printf("try controlling %d\n", m->id_);
       m->controlRaw();
+      std::this_thread::sleep_for(std::chrono::milliseconds(5));
+      printf("try reading %d\n", m->id_);
       m->readPos();
+      std::this_thread::sleep_for(std::chrono::milliseconds(5));
+      printf("read q %f \n", m->q_);
     }
+    printf("loop finished\n");
     // std::thread is implemented by pthread on linux, so we can use pthread API
     // combined with std::thread.
     pthread_testcancel();
-    std::this_thread::sleep_for(std::chrono::milliseconds(10));
   }
 }
 void DynamixelMotor::readPos() {
   uint8_t dxl_error = 0;
   uint32_t presentPos = 0;
-  auto dxl_comm_result = packetHandler_->read4ByteTxRx(
-      portHandler_, id_, ADDR_PRESENT_POSITION, (uint32_t *) &presentPos,
-      &dxl_error);
+  while (portHandler_->is_using_) {
+    std::this_thread::sleep_for(std::chrono::milliseconds(5));
+    printf("waiting for port handler to be free %d\n", id_);
+  }
+  auto dxl_comm_result =
+      packetHandler_->read4ByteTxRx(portHandler_, id_, ADDR_PRESENT_POSITION,
+                                    (uint32_t *)&presentPos, &dxl_error);
   if (dxl_comm_result != COMM_SUCCESS) {
     throw std::runtime_error(
         "Failed to readPos present position: " +
-            std::string(packetHandler_->getTxRxResult(dxl_comm_result)));
+        std::string(packetHandler_->getTxRxResult(dxl_comm_result)));
   } else if (dxl_error != 0) {
     throw std::runtime_error(
         "Failed to readPos present position: " +
-            std::string(packetHandler_->getRxPacketError(dxl_error)));
+        std::string(packetHandler_->getRxPacketError(dxl_error)));
   }
   q_ = presentPos / pos2Angle_;
 }
 void DynamixelMotor::controlRaw() {
-  if (newCommand_) {
-    uint8_t dxl_error = 0;
-    auto dxl_comm_result = packetHandler_->write4ByteTxRx(
-        portHandler_, id_, ADDR_GOAL_POSITION, (uint32_t) (qDes_ * pos2Angle_),
-        &dxl_error);
-    if (dxl_comm_result != COMM_SUCCESS) {
-      throw std::runtime_error(
-          "Failed to write goal position: " +
-              std::string(packetHandler_->getTxRxResult(dxl_comm_result)));
-    } else if (dxl_error != 0) {
-      throw std::runtime_error(
-          "Failed to write goal position: " +
-              std::string(packetHandler_->getRxPacketError(dxl_error)));
-    }
-    newCommand_ = false;
+  printf("read command %d %f\n", newCommand_, qdDes_);
+  while (portHandler_->is_using_) {
+    std::this_thread::sleep_for(std::chrono::milliseconds(5));
+    printf("waiting for port handler to be free %d\n", id_);
   }
+  // if (newCommand_) {
+  uint8_t dxl_error = 0;
+  auto dxl_comm_result = packetHandler_->write4ByteTxRx(
+      portHandler_, id_, ADDR_GOAL_POSITION, (uint32_t)(qDes_ * pos2Angle_),
+      &dxl_error);
+  if (dxl_comm_result != COMM_SUCCESS) {
+    throw std::runtime_error(
+        "Failed to write goal position: " +
+        std::string(packetHandler_->getTxRxResult(dxl_comm_result)));
+  } else if (dxl_error != 0) {
+    throw std::runtime_error(
+        "Failed to write goal position: " +
+        std::string(packetHandler_->getRxPacketError(dxl_error)));
+  }
+  newCommand_ = false;
+  printf("controlled %f!!!!!!!!\n", qDes_);
+  //}
 }
 DynamixelMotor::~DynamixelMotor() {
   torqueControl(TORQUE_DISABLE);
